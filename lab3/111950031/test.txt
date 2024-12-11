@@ -1,0 +1,67 @@
+Hello everyone, we are Team YYYYY, and our topic is Summary from Vocals.
+
+This is our contents.
+
+Our goal is to create a tool that can summarize key points from asynchronous remote courses into text.
+
+And our motivation for doing this is because we feel overwhelmed by the endless asynchronous course videos every week, often feeling mentally and physically exhausted. Therefore, we really want a tool that can quickly summarize the key points of the videos. However, we found that the tools available online require payment, and some can only summarize videos in English. Thus, we decided to create our own tool.
+
+Here are the tasks we will execute in this final project. The first step is to use a dataset containing Chinese audio files and their corresponding Chinese text labels to train our model. The primary goal of this model is to convert spoken messages into text. Next, we will use the Chat GPT API to process the text transcribed by our model, asking it to create a summary and then output it. Finally, we will develop a web application that allows users to easily upload audio and receive a summary.
+
+Here is our related work, which includes papers on CNN and LSTM models, the Mozilla Common Voice dataset, and tools like Paddle Speech, Whisper, and OpenAI's Chat GPT. Detailed links will be provided in the reference section at the end of the slides.
+
+Next, regarding implementation details, we first introduce our dataset. We are using the Mozilla Common Voice dataset, which contains over 130,000 samples and is one of the few datasets that include Traditional Chinese text labels. This dataset has been used in numerous papers accepted by top conferences, which is why we chose it for our training data.
+
+Before starting the implementation, we performed some preprocessing on the data. For instance, the audio files in the dataset are in MP3 format, which makes feature extraction more challenging. Therefore, we first converted all files to WAV format. Next, we needed to extract features, which we did using Librosa to compute the Mel spectrogram and convert it to a decibel scale (dB scale) Mel spectrogram.
+
+First, we will introduce our baseline model. Our baseline model is a CNN model.We used CNN because numerous studies have shown that CNNs are well-suited for extracting local features, particularly in handling spatial features in spectrograms. Convolutional layers can capture local patterns in the spectrogram, such as formants and frequency variations, which are crucial for speech recognition.
+
+This slide presents our baseline model, a Convolutional Neural Network (CNN). Our model consists of two convolutional layers to extract features from the audio data, followed by fully connected layers with dropout to prevent overfitting. The output layer uses softmax activation for classification. We employ categorical crossentropy as the loss function and Adam as the optimizer. The model is trained for 20 epochs and 100 epochs with a batch size of 32. We also experimented with max pooling and average pooling for the pooling layers. The code snippet on the right illustrates the implementation of this CNN model, including the convolutional layers, pooling layers, fully connected layers, and the final compilation step.
+
+We compare different pooling methods to find the optimal approach for the speech-to-text task. Pooling layers in convolutional neural networks play a crucial role in reducing the size of feature maps, decreasing computational load, and preventing overfitting. Max pooling and average pooling are two common pooling methods. Max pooling selects the maximum value from the feature map, while average pooling takes the average value. By comparing these two methods, we aim to understand their differences in terms of model accuracy and stability, allowing us to choose the pooling method that best enhances the model's performance.
+
+And this is the result with our baseline CNN model using Max Pooling. Compared to Average Pooling, we observed greater fluctuations in accuracy. Additionally, we can see that both models may suffer from overfitting.
+
+This is the result with our baseline CNN model using Average Pooling. As we can see from the accuracy and Character Error Rate (Character Error Rate), the training results were not very satisfactory. We will explain what Character Error Rate means in the Evaluation Metrics section.
+
+We integrated LSTM into the baseline CNN model because LSTM can effectively capture long-term dependencies and temporal information. Since speech signals are time-series data, LSTM can handle dependencies across different time steps, enabling a better understanding of the speech content.
+
+This slide presents our main approach, a CNN + LSTM model. We use TimeDistributed Convolutional Layers to capture temporal features, followed by LSTM layers with dropout to handle sequential data. The output layer uses softmax activation for classification. Our model uses categorical crossentropy as the loss function, Adam as the optimizer, and is trained for 20 epochs and 100 epochs with a batch size of 32. We experimented with both max pooling and average pooling. The code snippet illustrates the implementation details.
+
+This is the result of our CNN plus LSTM model with Max Pooling. From the results, we can see that even with the addition of LSTM to the CNN, the performance is still not very satisfactory.
+
+And this is the result using Average Pooling. As we can see, even with a different pooling method, the Character Error Rate value remains quite high.
+
+From these two charts, we can see that regardless of using max pooling or average pooling, the validation Character Error Rate of the CNN+LSTM model are very high and highly fluctuating. This may indicate issues such as overfitting, inappropriate model architecture or hyperparameter settings, and insufficient quality or quantity of training and validation data.
+
+So, we began analyzing potential reasons why our model's performance might be suboptimal. We identified two primary issues: the first is that our data preprocessing was insufficient, and the second is that our model's depth was not adequate. Both of these problems were largely due to hardware limitations. For data preprocessing, some approaches involve segmenting audio data into word fragments before training. However, without a GPU and working in a Colab environment, we couldn't handle large data volumes, and Colab often timed out. Regarding model depth, our hardware limitations also prevented us from training deeper models. Therefore, we decided to try using Paddle Speech and the OPENAI Whisper pre-trained models to make comparisons. This allowed us to achieve our goals despite limited hardware resources.
+
+let's talk about why we chose Whisper. Whisper is an open-source model developed by OpenAI. Being open-source makes it easy to use. Additionally, Whisper has been trained on a very large dataset, which gives it high accuracy in its results. This is especially important because in real-world applications, we need a model that is both precise and stable, and Whisper meets these requirements perfectly. In summary, Whisper offers both technical advantages and practical reliability and accuracy, which is why we chose it.
+
+To test the performance of whisper. We use two dataset.  First, we use a small dataset. It contains about 5000 data. We will discuss how to calculate the correct rate later. We can first take a look at the result of the small dataset. The x-axis shows the length of sentences. The y-axis shows the correct rates. We can see the performance is not good in very short sentence, but its average weighted correct rate is good, which is about 81.45%.
+
+On the other hand, this is the result of the big dataset. It contains about 136000 data. Moreover, it has a stable result except for the very long sentence and it has a correct rate of 76.65%.
+
+We not only use Whisper model, but also find a good model called PaddleSpeech Paddle Speech is an open-source model from China. It was developed for a variety of critical tasks in speech and audio, with the state-of-art and influential models. The most important is Paddle Speech has won the NAACL2022 Best Demo Award. This is one of the two reasons why we choose it. The other reason is that the model is from China, so we guess that it will have a good performance in Chinese, but it's just a guess.
+
+This is the result with the same small dataset as we used in Whisper. Clearly, it has a poor performance compared to Whisper, and the average weighted correct rate is only 59.54%.
+
+This is the result with the same big dataset as we used in Whisper. It has a good performance now. The correct rate is about 79.73%, which is higher than that in Whisper. Why will the two have so much different accuracy? We will discuss it later.
+
+Next, let's talk about our evaluation metric. Initially, we compared the model's output directly with the dataset's labeled text. However, we found that due to the presence of typos in Traditional Chinese, a single character error could cause the entire sentence to be marked as incorrect, resulting in an accuracy of 0%. Therefore, we looked for alternative methods and found Character Error Rate (Character Error Rate). Character Error Rate is a metric commonly used to measure the accuracy of text recognition systems, especially in speech recognition. It calculates the edit distance between the recognized output and the original text, which includes the operations of insertions (I), deletions (D), and substitutions (S). The formula is I plus D plus S divided N, where N is the length of the original text. A lower Character Error Rate indicates higher accuracy, so we use one minus Character Error Rate as our accuracy indicator. From the Character Error Rate values, we observed that our self-trained models did not achieve very high accuracy. We believe this may be due to inadequate data preprocessing and insufficient model depth. The pre-trained models, Whisper and Paddle Speech, performed the best on our dataset, with correct rate of 81.45% and 79.73%, respectively.
+
+To sum up, our model undoubtedly has a bad performance compared with the other two models. Whisper and Paddle Speech have good performance, however, they are not perfect as they have some limitations which we will discuss later.
+
+Now, we want to show the problem and the limit about Whisper. The problem is that it is not stable enough. Sometimes it will translate the speech into pinyin while it should be translate into Traditional Chinese. And we didn't find any solution to it, so we just remove it from the dataset to avoid breaking the balance of the result. To conclude, it might fail to get output in correct format from all input speech, which is not stable.
+
+Next, we want to show the problem and the limit about Paddle Speech. The problem is that it doesn't support Traditional Chinese now, so we can only output the text in Simplified Chinese. To solve this, we use openCC, which is open-source and widely used for converting texts between Simplified Chinese and Traditional Chinese. So, the limit is that when converting words, some word might not be converted properly, such as the example above. And when we comparing the result with the real data, the wrong words will lead to lower accuracy.
+
+In conclusion, the limitation of the models can be listed as follows. For our model, due to the lack of computational resources and inadequate model depth, the accuracy is significantly low. For Whisper model, it is easy to use but may not be stable as other models being. For Paddle Speech model, it only supports Simplified Chinese and English now. So it is a bit inconvenient to use since we need to convert the output.
+
+After completing the speech-to-text task, the final part of our goal is to summarize the text. We use the text transcribed by the Whisper model, selected for its highest Character Error Rate value, and connect it to the Chat GPT API to perform the summarization. Additionally, we developed a web application for this process. For detailed code, please refer to our Git Hub.
+
+Finally, we will demonstrate our application: summarizing key points from lecture videos into text.
+
+And this slide is our reference.
+
+This is the end of our presentation. And this is the contribution table of our team member！Thankyou for your listening.
